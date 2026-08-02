@@ -21,9 +21,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var upReleases []string
+
 var upCmd = &cobra.Command{
-	Use:   "up",
-	Short: "This command installs or upgrades all the releases defined in your compose file and uninstalls releases that have been removed since the last revision.",
+	Use:   "up [RELEASE ...]",
+	Short: "Install or upgrade releases defined in your compose file.",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
@@ -37,10 +39,13 @@ var upCmd = &cobra.Command{
 			return err
 		}
 
-		return compose.RunUp(config)
+		releases := append([]string{}, args...)
+		releases = append(releases, upReleases...)
+		return compose.RunUp(config, releases)
 	},
 }
 
 func init() {
+	upCmd.Flags().StringSliceVarP(&upReleases, "release", "r", nil, "Release name to install or upgrade (can be specified multiple times)")
 	rootCmd.AddCommand(upCmd)
 }

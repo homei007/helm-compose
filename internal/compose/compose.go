@@ -16,6 +16,7 @@ limitations under the License.
 package compose
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
@@ -24,80 +25,206 @@ import (
 	"github.com/seacrew/helm-compose/internal/util"
 )
 
-func RunUp(config *cfg.Config) error {
+var (
+	loadConfig  = prov.Load
+	storeConfig = prov.Store
+)
+
+func RunUp(config *cfg.Config, releases []string) error {
+	releaseNames, err := selectReleaseNames(config.Releases, releases)
+	if err != nil {
+		return err
+	}
+
 	for name, url := range config.Repositories {
 		if err := addHelmRepository(name, url); err != nil {
 			return err
 		}
 	}
 
-	previousConfig, err := prov.Load(config)
+	previousConfig, err := loadConfig(config)
 	if err != nil {
 		return err
 	}
 
-	if !config.Equal(previousConfig) {
-		if err := prov.Store(config); err != nil {
+	operations := make([]func() error, 0, len(releaseNames))
+	for _, name := range releaseNames {
+		name := name
+		release := config.Releases[name]
+		operations = append(operations, func() error {
+			if err := installHelmRelease(name, &release); err != nil {
+				return fmt.Errorf("release %q: %w", name, err)
+			}
+			return nil
+		})
+	}
+
+	if len(releases) == 0 && previousConfig != nil {
+		for name, release := range previousConfig.Releases {
+			if _, ok := config.Releases[name]; ok {
+				continue
+			}
+
+			name := name
+			release := release
+			operations = append(operations, func() error {
+				if err := uninstallHelmRelease(name, &release); err != nil {
+					return fmt.Errorf("release %q: %w", name, err)
+				}
+				return nil
+			})
+		}
+	}
+
+	if err := runConcurrently(operations); err != nil {
+		return err
+	}
+
+	state := config
+	if len(releases) > 0 {
+		state = mergeSelectedReleases(config, previousConfig, releaseNames)
+	}
+
+	if !state.Equal(previousConfig) {
+		if err := storeConfig(state); err != nil {
 			return err
 		}
 	}
 
-	var wg sync.WaitGroup
-
-	for name, release := range config.Releases {
-		wg.Add(1)
-		go func(name string, release cfg.Release) {
-			installHelmRelease(name, &release)
-			wg.Done()
-		}(name, release)
-	}
-
-	if previousConfig == nil {
-		wg.Wait()
-		return nil
-	}
-
-	for name, release := range previousConfig.Releases {
-		wg.Add(1)
-		go func(name string, release cfg.Release) {
-			if _, ok := config.Releases[name]; ok {
-				wg.Done()
-				return
-			}
-
-			uninstallHelmRelease(name, &release)
-			wg.Done()
-		}(name, release)
-	}
-
-	wg.Wait()
-
 	return nil
 }
 
-func RunDown(config *cfg.Config) error {
-	previousConfig, err := prov.Load(config)
+func RunDown(config *cfg.Config, releases []string) error {
+	previousConfig, err := loadConfig(config)
 	if err != nil {
 		return err
 	}
+	storage := config.Storage
 
 	if previousConfig != nil {
 		config = previousConfig
 	}
 
-	var wg sync.WaitGroup
+	releaseNames, err := selectReleaseNames(config.Releases, releases)
+	if err != nil {
+		return err
+	}
 
-	for name, release := range config.Releases {
+	operations := make([]func() error, 0, len(releaseNames))
+	for _, name := range releaseNames {
+		name := name
+		release := config.Releases[name]
+		operations = append(operations, func() error {
+			if err := uninstallHelmRelease(name, &release); err != nil {
+				return fmt.Errorf("release %q: %w", name, err)
+			}
+			return nil
+		})
+	}
+
+	if err := runConcurrently(operations); err != nil {
+		return err
+	}
+
+	if len(releases) > 0 && previousConfig != nil {
+		state := cloneConfig(previousConfig)
+		state.Storage = storage
+		for _, name := range releaseNames {
+			delete(state.Releases, name)
+		}
+		if !state.Equal(previousConfig) {
+			if err := storeConfig(state); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func selectReleaseNames(releases map[string]cfg.Release, selected []string) ([]string, error) {
+	if len(selected) == 0 {
+		names := make([]string, 0, len(releases))
+		for name := range releases {
+			names = append(names, name)
+		}
+		return names, nil
+	}
+
+	names := make([]string, 0, len(selected))
+	seen := make(map[string]struct{}, len(selected))
+	for _, name := range selected {
+		if _, ok := releases[name]; !ok {
+			return nil, fmt.Errorf("release %q not found in compose configuration", name)
+		}
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		seen[name] = struct{}{}
+		names = append(names, name)
+	}
+
+	return names, nil
+}
+
+func runConcurrently(operations []func() error) error {
+	var wg sync.WaitGroup
+	errorsChannel := make(chan error, len(operations))
+
+	for _, operation := range operations {
 		wg.Add(1)
-		go func(name string, release cfg.Release) {
-			uninstallHelmRelease(name, &release)
-			wg.Done()
-		}(name, release)
+		go func(operation func() error) {
+			defer wg.Done()
+			if err := operation(); err != nil {
+				errorsChannel <- err
+			}
+		}(operation)
 	}
 
 	wg.Wait()
+	close(errorsChannel)
 
-	return nil
+	var operationErrors []error
+	for err := range errorsChannel {
+		operationErrors = append(operationErrors, err)
+	}
+
+	return errors.Join(operationErrors...)
+}
+
+func mergeSelectedReleases(current, previous *cfg.Config, selected []string) *cfg.Config {
+	state := cloneConfig(previous)
+	state.Version = current.Version
+	state.Storage = current.Storage
+	state.Repositories = cloneRepositories(current.Repositories)
+
+	for _, name := range selected {
+		state.Releases[name] = current.Releases[name]
+	}
+
+	return state
+}
+
+func cloneConfig(config *cfg.Config) *cfg.Config {
+	if config == nil {
+		return &cfg.Config{Releases: map[string]cfg.Release{}}
+	}
+
+	clone := *config
+	clone.Releases = make(map[string]cfg.Release, len(config.Releases))
+	for name, release := range config.Releases {
+		clone.Releases[name] = release
+	}
+	clone.Repositories = cloneRepositories(config.Repositories)
+	return &clone
+}
+
+func cloneRepositories(repositories map[string]string) map[string]string {
+	clone := make(map[string]string, len(repositories))
+	for name, url := range repositories {
+		clone[name] = url
+	}
+	return clone
 }
 
 func ListRevisions(config *cfg.Config) error {
@@ -139,13 +266,17 @@ func Template(config *cfg.Config, releases []string) error {
 
 	for name, release := range config.Releases {
 		if len(releases) == 0 {
-			templateHelmRelease(name, &release)
+			if err := templateHelmRelease(name, &release); err != nil {
+				return fmt.Errorf("release %q: %w", name, err)
+			}
 			continue
 		}
 
 		for _, rel := range releases {
 			if rel == name {
-				templateHelmRelease(name, &release)
+				if err := templateHelmRelease(name, &release); err != nil {
+					return fmt.Errorf("release %q: %w", name, err)
+				}
 			}
 		}
 	}
