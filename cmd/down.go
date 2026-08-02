@@ -21,10 +21,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var downReleases []string
+
 // downCmd represents the down command
 var downCmd = &cobra.Command{
-	Use:   "down",
-	Short: "This command uninstalls all releases defined in your compose file.",
+	Use:   "down [RELEASE ...]",
+	Short: "Uninstall releases defined in your compose file.",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
@@ -38,10 +40,13 @@ var downCmd = &cobra.Command{
 			return err
 		}
 
-		return compose.RunDown(config)
+		releases := append([]string{}, args...)
+		releases = append(releases, downReleases...)
+		return compose.RunDown(config, releases)
 	},
 }
 
 func init() {
+	downCmd.Flags().StringSliceVarP(&downReleases, "release", "r", nil, "Release name to uninstall (can be specified multiple times)")
 	rootCmd.AddCommand(downCmd)
 }

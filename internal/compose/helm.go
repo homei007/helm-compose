@@ -31,9 +31,10 @@ import (
 )
 
 var (
-	helm       = os.Getenv("HELM_BIN")
-	versionRE  = regexp.MustCompile(`Version:\s*"([^"]+)"`)
-	minVersion = semver.MustParse("v3.0.0")
+	helm        = os.Getenv("HELM_BIN")
+	versionRE   = regexp.MustCompile(`Version:\s*"([^"]+)"`)
+	minVersion  = semver.MustParse("v3.0.0")
+	executeHelm = util.Execute
 )
 
 type HelmCommand string
@@ -81,27 +82,25 @@ func addHelmRepository(name string, url string) error {
 	return nil
 }
 
-func installHelmRelease(name string, release *cfg.Release) {
+func installHelmRelease(name string, release *cfg.Release) error {
 	args, err := createHelmArguments(HELM_UPGRADE, name, release)
 	if err != nil {
-		cp := util.NewColorPrinter(name)
-		cp.Printf("%s |\t\t%s", name, err)
+		return err
 	}
 
-	helmExec(name, args)
+	return helmExec(name, args)
 }
 
-func templateHelmRelease(name string, release *cfg.Release) {
+func templateHelmRelease(name string, release *cfg.Release) error {
 	args, err := createHelmArguments(HELM_TEMPLATE, name, release)
 	if err != nil {
-		cp := util.NewColorPrinter(name)
-		cp.Printf("# %s |\t\t%s", name, err)
+		return err
 	}
 
-	helmExec("", args)
+	return helmExec("", args)
 }
 
-func uninstallHelmRelease(name string, release *cfg.Release) {
+func uninstallHelmRelease(name string, release *cfg.Release) error {
 	var args []string
 
 	args = append(args, "uninstall")
@@ -136,7 +135,7 @@ func uninstallHelmRelease(name string, release *cfg.Release) {
 
 	args = append(args, name)
 
-	helmExec(name, args)
+	return helmExec(name, args)
 }
 
 func createHelmArguments(command HelmCommand, name string, release *cfg.Release) ([]string, error) {
@@ -247,9 +246,9 @@ func createHelmArguments(command HelmCommand, name string, release *cfg.Release)
 	return args, nil
 }
 
-func helmExec(name string, args []string) {
+func helmExec(name string, args []string) error {
 	cp := util.NewColorPrinter(name)
-	output, _ := util.Execute(helm, args...)
+	output, executeErr := executeHelm(helm, args...)
 
 	scanner := bufio.NewScanner(strings.NewReader(output))
 	for scanner.Scan() {
@@ -260,9 +259,9 @@ func helmExec(name string, args []string) {
 		}
 	}
 
-	err := scanner.Err()
-
-	if err != nil {
-		cp.Printf(err.Error())
+	if err := scanner.Err(); err != nil {
+		return err
 	}
+
+	return executeErr
 }

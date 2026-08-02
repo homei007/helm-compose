@@ -43,10 +43,22 @@ Install your releases:
 $ helm compose up -f helm-compose.yaml
 ```
 
+Install or upgrade only selected releases:
+
+```bash
+$ helm compose up -f helm-compose.yaml wordpress wordpress2
+```
+
 Uninstall your releases
 
 ```bash
 $ helm compose down -f helm-compose.yaml
+```
+
+Uninstall only selected releases:
+
+```bash
+$ helm compose down -f helm-compose.yaml wordpress2
 ```
 
 A Helm Compose file looks something like this:
