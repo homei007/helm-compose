@@ -1,4 +1,5 @@
-# Changes since 1.3.0
+# Changes since 1.4.0
+# 1.4.0
 # 1.3.0
 - feat: add templating command
 - chore: upgrade to golang 1.22
