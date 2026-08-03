@@ -7,8 +7,9 @@ existing Helm Compose file format while accepting fixes and improvements.
 
 This project is not affiliated with or endorsed by Seacrew or the Helm project.
 
-Current development focuses on release selection, concurrent processing, and
-keeping the plugin reliable and easy to install.
+Current development focuses on reliable multi-release operations, concurrent
+processing, Helm 3 and Helm 4 compatibility, and making the plugin easy to
+install and maintain.
 
 ![helm-compose-banner](https://user-images.githubusercontent.com/18513179/240495789-e76890d3-f0f9-48b9-9d18-89e53effe65b.png)
 
@@ -19,10 +20,18 @@ Helm Compose is a tool for managing multiple releases of one or many different H
 
 ## Installation
 
-It is requirement to use helm v3.10.0+.
+Helm Compose currently supports Helm v3.10.0 and newer. Helm v4 support is
+being validated; normal CLI-plugin workflows are expected to work, while
+post-renderer configurations still need a Helm v4-specific compatibility
+update.
 
-The fork is currently in active development and does not have a published
-binary release yet. For local development from this repository:
+Install the latest published release with:
+
+```
+helm plugin install https://github.com/homei007/helm-compose --version 1.4.0
+```
+
+For local development from this repository:
 
 ```
 make install
@@ -33,6 +42,40 @@ After a fork release is published, install it with:
 ```
 helm plugin install https://github.com/homei007/helm-compose
 ```
+
+## Roadmap
+
+This roadmap describes the next priorities for the community-maintained fork.
+Actual timing depends on testing, user feedback, and contributor capacity.
+
+### Compatibility and reliability
+
+- Publish a Helm 3/Helm 4 compatibility matrix and run both versions in CI.
+- Migrate the plugin manifest to Helm 4's versioned subprocess schema.
+- Update post-renderer handling for Helm 4 while preserving Helm 3 behavior.
+- Improve failure reporting and cancellation when concurrent releases are
+  processed.
+- Expand integration coverage for local and S3 state storage, namespaces,
+  dependencies, and repeatable upgrades.
+
+### User experience
+
+- Add a dry-run or plan mode that shows the actions Helm Compose will take.
+- Improve selective release operations, dependency ordering, and progress
+  output for larger compose files.
+- Document migration paths, common failure modes, and tested Helm/Kubernetes
+  combinations.
+- Add more practical examples for production-style repositories and values
+  management.
+
+### Sustainable maintenance
+
+- Keep automated tests, release packaging, checksums, and documentation
+  publishing on every release.
+- Add issue and pull-request templates to make support and contribution easier.
+- Collect real-world feedback from Helm users and prioritize changes that
+  preserve the existing compose-file format.
+- Make security and dependency updates part of the normal maintenance cycle.
 
 ## Quick Start Guide
 
