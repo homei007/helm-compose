@@ -6,13 +6,13 @@ on:
     paths:
       - docs/**
       - mkdocs.yaml
+      - .github/workflows/docs.yaml
   workflow_dispatch:
 permissions:
   contents: write
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: github.event.repository.fork == false
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,16 +40,6 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          mike deploy -b gh-pages -p -F mkdocs.yaml -u next
-
-      - name: Run mkdocs release deployment
-        if: "contains(github.event.head_commit.message, 'docs: release')"
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          LATEST_TAG=$(git describe --abbrev=0)
-          SHORT_VERSION=${LATEST_TAG%.*}
-
-          mike deploy -b gh-pages -p -F mkdocs.yaml -u ${SHORT_VERSION} latest
+          mike deploy -b gh-pages -p -F mkdocs.yaml -u next latest
+          mike set-default -b gh-pages -p latest
 
