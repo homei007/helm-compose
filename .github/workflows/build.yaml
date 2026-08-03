@@ -2,27 +2,13 @@ name: Build
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - .github/**
-      - docs/**
-      - LICENSES/**
-      - README.md
-      - mkdocs.yaml
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,17 +28,4 @@ jobs:
         with:
           name: helm-compose
           path: release/*
-
-      - name: Publish release
-        if: "contains(github.event.head_commit.message, 'docs: release')"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG=$(git describe --abbrev=0)
-
-          for FILE in release/*.tgz; do 
-            gh release upload ${TAG} ${FILE} --clobber
-          done
-
-          gh release edit ${TAG} --latest --prerelease=false
 
