@@ -5,7 +5,7 @@ if [ "${HELM_DEBUG:-}" = "1" ] || [ "${HELM_DEBUG:-}" = "true" ] || [ -n "${HELM
 fi
 
 PLUGIN_NAME="helm-compose"
-GITHUB_REPO="seacrew/helm-compose"
+GITHUB_REPO="homei007/helm-compose"
 
 [ -z "$HELM_BIN" ] && HELM_BIN=$(command -v helm)
 

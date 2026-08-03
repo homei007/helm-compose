@@ -2,6 +2,9 @@ name: CI
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
@@ -21,6 +24,12 @@ jobs:
       - uses: azure/setup-helm@v4
         with:
           version: v3.11.0
+
+      - name: Run unit tests
+        run: go test ./...
+
+      - name: Run go vet
+        run: go vet ./...
 
       - name: Install Helm Compose
         run: make install

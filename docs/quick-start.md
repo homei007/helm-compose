@@ -2,16 +2,17 @@
 
 ## Installation
 
-Install a specific version (recommended). Click [here](https://github.com/seacrew/helm-compose/releases/latest) for the latest version.
+The fork is currently in active development and does not have a published
+binary release yet. For local development from this repository:
 
 ```
-helm plugin install https://github.com/seacrew/helm-compose --version 1.3.0
+make install
 ```
 
-Install latest version.
+After a fork release is published, install it with:
 
 ```
-helm plugin install https://github.com/seacrew/helm-compose
+helm plugin install https://github.com/homei007/helm-compose
 ```
 
 ## How to use helm compose
@@ -71,4 +72,4 @@ All `helm-compose` commands accept the `-f` flag to pass your compose file locat
 - compose.yaml
 - compose.yml
 
-Check out the [helm compose examples](https://github.com/seacrew/helm-compose/tree/main/examples).
+Check out the [helm compose examples](https://github.com/homei007/helm-compose/tree/main/examples).
