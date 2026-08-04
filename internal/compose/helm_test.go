@@ -20,8 +20,21 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Masterminds/semver"
 	cfg "github.com/seacrew/helm-compose/internal/config"
 )
+
+func TestHelmShortVersionParsesHelm3AndHelm4(t *testing.T) {
+	for _, versionOutput := range []string{"v3.11.0", "v4.2.3"} {
+		version, err := semver.NewVersion(strings.TrimSpace(versionOutput))
+		if err != nil {
+			t.Fatalf("failed to parse Helm version %q: %v", versionOutput, err)
+		}
+		if version.LessThan(minVersion) {
+			t.Fatalf("Helm version %q was incorrectly rejected", versionOutput)
+		}
+	}
+}
 
 func TestCreateHelmArgumentsSupportsHelm3PostRendererPath(t *testing.T) {
 	release := &cfg.Release{

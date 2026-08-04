@@ -51,7 +51,8 @@ Actual timing depends on testing, user feedback, and contributor capacity.
 ### Compatibility and reliability
 
 - Keep the Helm 3/Helm 4 compatibility matrix and CI coverage green.
-- Maintain the plugin's versioned subprocess manifest as Helm evolves.
+- Keep the shared legacy manifest compatible with Helm 3 and Helm 4 while
+  preparing a versioned-manifest migration path before Helm 5.
 - Expand post-renderer examples for Helm 3 paths and Helm 4 plugin names.
 - Improve failure reporting and cancellation when concurrent releases are
   processed.

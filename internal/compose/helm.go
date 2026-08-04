@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"regexp"
 	"strings"
 
 	"github.com/Masterminds/semver"
@@ -32,7 +31,6 @@ import (
 
 var (
 	helm        = os.Getenv("HELM_BIN")
-	versionRE   = regexp.MustCompile(`Version:\s*"([^"]+)"`)
 	minVersion  = semver.MustParse("v3.0.0")
 	executeHelm = util.Execute
 )
@@ -46,7 +44,7 @@ const (
 )
 
 func CompatibleHelmVersion() error {
-	cmd := exec.Command(helm, "version")
+	cmd := exec.Command(helm, "version", "--short")
 	util.DebugPrint("Executing %s", strings.Join(cmd.Args, " "))
 
 	output, err := cmd.CombinedOutput()
@@ -54,16 +52,10 @@ func CompatibleHelmVersion() error {
 		return fmt.Errorf("failed to run `%s version`: %v", os.Getenv("HELM_BIN"), err)
 	}
 
-	versionOutput := string(output)
-
-	matches := versionRE.FindStringSubmatch(versionOutput)
-	if matches == nil {
-		return fmt.Errorf("failed to find version in output %#v", versionOutput)
-	}
-
-	helmVersion, err := semver.NewVersion(matches[1])
+	versionOutput := strings.TrimSpace(string(output))
+	helmVersion, err := semver.NewVersion(versionOutput)
 	if err != nil {
-		return fmt.Errorf("failed to parse version %#v: %v", matches[1], err)
+		return fmt.Errorf("failed to parse version %#v: %v", versionOutput, err)
 	}
 
 	if minVersion.GreaterThan(helmVersion) {
