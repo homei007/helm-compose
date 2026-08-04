@@ -185,12 +185,23 @@ func createHelmArguments(command HelmCommand, name string, release *cfg.Release)
 		args = append(args, "--skip-crds")
 	}
 
-	if release.PostRenderer != "" {
-		args = append(args, fmt.Sprintf("--post-renderer=%s", release.PostRenderer))
+	if release.PostRenderer != "" && release.PostRendererPlugin != "" {
+		return nil, fmt.Errorf("release %q cannot set both postRenderer and postRendererPlugin", name)
+	}
+
+	postRenderer := release.PostRenderer
+	if release.PostRendererPlugin != "" {
+		postRenderer = release.PostRendererPlugin
+	}
+
+	if postRenderer != "" {
+		args = append(args, fmt.Sprintf("--post-renderer=%s", postRenderer))
 	}
 
 	if len(release.PostRendererArgs) > 0 {
-		args = append(args, fmt.Sprintf("--post-renderer-args=[%s]", strings.Join(release.PostRendererArgs, ",")))
+		for _, postRendererArg := range release.PostRendererArgs {
+			args = append(args, fmt.Sprintf("--post-renderer-args=%s", postRendererArg))
+		}
 	}
 
 	if release.CAFile != "" {

@@ -12,6 +12,15 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        helm-version:
+          - v3.11.0
+          - v4.2.3
+
+    name: CI (Helm ${{ matrix.helm-version }})
+
     steps:
       - uses: actions/checkout@v4
 
@@ -23,7 +32,7 @@ jobs:
 
       - uses: azure/setup-helm@v4
         with:
-          version: v3.11.0
+          version: ${{ matrix.helm-version }}
 
       - name: Run unit tests
         run: go test ./...
@@ -33,6 +42,9 @@ jobs:
 
       - name: Install Helm Compose
         run: make install
+
+      - name: Verify Helm Compose plugin
+        run: helm plugin list
 
       - uses: helm/kind-action@v1.10.0
       

@@ -20,10 +20,10 @@ Helm Compose is a tool for managing multiple releases of one or many different H
 
 ## Installation
 
-Helm Compose currently supports Helm v3.10.0 and newer. Helm v4 support is
-being validated; normal CLI-plugin workflows are expected to work, while
-post-renderer configurations still need a Helm v4-specific compatibility
-update.
+Helm Compose currently supports Helm v3.10.0 and newer. Helm v4 CLI-plugin
+support is included and validated in CI. For post-rendering, keep using
+`postRenderer` with a Helm 3 executable; Helm 4 requires an installed
+postrenderer plugin name in `postRendererPlugin`.
 
 Install the latest published release with:
 
@@ -37,7 +37,7 @@ For local development from this repository:
 make install
 ```
 
-After a fork release is published, install it with:
+To install the latest version from the default branch, use:
 
 ```
 helm plugin install https://github.com/homei007/helm-compose
@@ -50,9 +50,9 @@ Actual timing depends on testing, user feedback, and contributor capacity.
 
 ### Compatibility and reliability
 
-- Publish a Helm 3/Helm 4 compatibility matrix and run both versions in CI.
-- Migrate the plugin manifest to Helm 4's versioned subprocess schema.
-- Update post-renderer handling for Helm 4 while preserving Helm 3 behavior.
+- Keep the Helm 3/Helm 4 compatibility matrix and CI coverage green.
+- Maintain the plugin's versioned subprocess manifest as Helm evolves.
+- Expand post-renderer examples for Helm 3 paths and Helm 4 plugin names.
 - Improve failure reporting and cancellation when concurrent releases are
   processed.
 - Expand integration coverage for local and S3 state storage, namespaces,

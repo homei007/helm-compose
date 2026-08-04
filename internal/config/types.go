@@ -45,6 +45,7 @@ type Release struct {
 	SkipTLSVerify    bool                   `yaml:"skipTlsVerify,omitempty"`
 	SkipCRDs         bool                   `yaml:"skipCrds,omitempty"`
 	PostRenderer     string                 `yaml:"postRenderer,omitempty"`
+	PostRendererPlugin string               `yaml:"postRendererPlugin,omitempty"`
 	PostRendererArgs []string               `yaml:"postRendererArgs,omitempty"`
 	KubeConfig       string                 `yaml:"kubeconfig,omitempty"`
 	KubeContext      string                 `yaml:"kubecontext,omitempty"`

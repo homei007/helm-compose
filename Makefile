@@ -19,6 +19,7 @@ dist:
 	rm -rf build/compose/* release/*
 	mkdir -p build/compose/bin release/
 	cp README.md LICENSE plugin.yaml build/compose
+	cp -R scripts build/compose
 	GOOS=linux GOARCH=amd64 go build -o build/compose/bin/compose -trimpath -ldflags="$(LDFLAGS)"
 	tar -C build/ -zcvf $(CURDIR)/release/helm-compose-linux-amd64.tgz compose/
 	GOOS=linux GOARCH=arm64 go build -o build/compose/bin/compose -trimpath -ldflags="$(LDFLAGS)"
