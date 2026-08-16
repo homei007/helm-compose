@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.0](https://github.com/homei007/helm-compose/compare/1.5.0...1.6.0) (2026-08-16)
+
+
+### Features
+
+* add planning and dependency-aware execution ([f1ff70f](https://github.com/homei007/helm-compose/commit/f1ff70fdbcb3977dd098b40c7c949a0cc9c8d411))
+* add planning and dependency-aware execution ([b407145](https://github.com/homei007/helm-compose/commit/b407145c18ee98c4d320613e46d51d03101365de))
+
 ## [1.5.0](https://github.com/homei007/helm-compose/compare/1.4.0...1.5.0) (2026-08-16)
 
 
