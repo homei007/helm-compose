@@ -28,7 +28,7 @@ var templateCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 
-		if err := compose.CompatibleHelmVersion(); err != nil {
+		if err := compose.CompatibleHelmVersionContext(cmd.Context()); err != nil {
 			return err
 		}
 
@@ -37,7 +37,7 @@ var templateCmd = &cobra.Command{
 			return err
 		}
 
-		return compose.Template(config, args)
+		return compose.TemplateContext(cmd.Context(), config, args)
 	},
 }
 

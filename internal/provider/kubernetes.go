@@ -55,32 +55,9 @@ func newKubernetesProvider(providerConfig *cfg.Storage) (*KubernetesProvider, er
 		namespace = "default"
 	}
 
-	kubeconfig := providerConfig.KubeConfig
-	if len(kubeconfig) == 0 {
-		homedir, err := os.UserHomeDir()
-		if err != nil {
-			return nil, err
-		}
-
-		kubeconfig = filepath.Join(
-			homedir, ".kube", "config",
-		)
-	}
-
-	var err error
-	var config *rest.Config
-
-	if len(providerConfig.KubeContext) == 0 {
-		config, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfig}, &clientcmd.ConfigOverrides{CurrentContext: providerConfig.KubeContext}).ClientConfig()
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
-		if err != nil {
-			return nil, err
-		}
-
+	config, err := kubernetesRESTConfig(providerConfig)
+	if err != nil {
+		return nil, err
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
@@ -102,6 +79,29 @@ func newKubernetesProvider(providerConfig *cfg.Storage) (*KubernetesProvider, er
 	}
 
 	return provider, nil
+}
+
+func kubernetesRESTConfig(providerConfig *cfg.Storage) (*rest.Config, error) {
+	kubeconfig := providerConfig.KubeConfig
+	if len(kubeconfig) == 0 {
+		homedir, err := os.UserHomeDir()
+		if err != nil {
+			return nil, err
+		}
+
+		kubeconfig = filepath.Join(
+			homedir, ".kube", "config",
+		)
+	}
+
+	overrides := &clientcmd.ConfigOverrides{}
+	if providerConfig.KubeContext != "" {
+		overrides.CurrentContext = providerConfig.KubeContext
+	}
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfig},
+		overrides,
+	).ClientConfig()
 }
 
 func (p KubernetesProvider) load() (*[]byte, error) {
@@ -167,11 +167,7 @@ func (p KubernetesProvider) store(encodedConfig *string) error {
 		return err
 	}
 
-	if minimum > revision-p.numberOfRevisions {
-		return nil
-	}
-
-	for i := minimum; i <= revision-p.numberOfRevisions; i++ {
+	for _, i := range revisionsToDelete(minimum, revision, p.numberOfRevisions) {
 		if err = p.client.CoreV1().Secrets(p.namespace).Delete(context.Background(), fmt.Sprintf(k8sSecretNameFormat, p.name, i), metav1.DeleteOptions{}); err != nil {
 			fmt.Println(err)
 		}
@@ -181,7 +177,7 @@ func (p KubernetesProvider) store(encodedConfig *string) error {
 }
 
 func (p KubernetesProvider) list() ([]ComposeRevision, error) {
-	secrets, err := p.client.CoreV1().Secrets(p.namespace).List(context.Background(), metav1.ListOptions{})
+	secrets, err := p.client.CoreV1().Secrets(p.namespace).List(context.Background(), *p.listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +236,7 @@ func (p KubernetesProvider) minMax(secrets []corev1.Secret) (int, int, *corev1.S
 		return -1, -1, nil, err
 	}
 
-	var latest corev1.Secret
+	var latest *corev1.Secret
 
 	for _, secret := range secrets {
 		matches := r.FindStringSubmatch(secret.Name)
@@ -255,7 +251,8 @@ func (p KubernetesProvider) minMax(secrets []corev1.Secret) (int, int, *corev1.S
 
 		if revision > maximum {
 			maximum = revision
-			latest = secret
+			item := secret
+			latest = &item
 		}
 
 		if revision < minimum {
@@ -263,5 +260,9 @@ func (p KubernetesProvider) minMax(secrets []corev1.Secret) (int, int, *corev1.S
 		}
 	}
 
-	return minimum, maximum, &latest, nil
+	if latest == nil {
+		return 0, 0, nil, nil
+	}
+
+	return minimum, maximum, latest, nil
 }

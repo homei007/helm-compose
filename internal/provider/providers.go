@@ -37,32 +37,34 @@ type Provider interface {
 	get(revision int) (*[]byte, error)
 }
 
-var provider Provider
-
 func getProvider(providerConfig *cfg.Storage) (Provider, error) {
-	if provider != nil {
-		return provider, nil
-	}
-
 	if providerConfig.NumberOfRevisions <= 0 {
 		providerConfig.NumberOfRevisions = 10
 	}
 
-	var err error
-
 	switch providerConfig.Type {
 	case cfg.Local:
-		provider = newLocalProvider(providerConfig)
-		return provider, nil
+		return newLocalProvider(providerConfig), nil
 	case cfg.Kubernetes:
-		provider, err = newKubernetesProvider(providerConfig)
-		return provider, err
+		return newKubernetesProvider(providerConfig)
 	case cfg.S3:
-		provider, err = newS3Provider(providerConfig)
-		return provider, err
+		return newS3Provider(providerConfig)
 	default:
 		return nil, fmt.Errorf("unknown provider type %q", providerConfig.Type)
 	}
+}
+
+func revisionsToDelete(minimum, latest, numberToKeep int) []int {
+	lastExpired := latest - numberToKeep
+	if minimum <= 0 || lastExpired < minimum {
+		return nil
+	}
+
+	revisions := make([]int, 0, lastExpired-minimum+1)
+	for revision := minimum; revision <= lastExpired; revision++ {
+		revisions = append(revisions, revision)
+	}
+	return revisions
 }
 
 func Load(config *cfg.Config) (*cfg.Config, error) {

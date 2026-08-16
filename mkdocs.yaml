@@ -9,6 +9,7 @@ nav:
   - "Compose File Reference": "compose-file-reference.md"
   - "Storage Providers": "storage-providers.md"
   - Commands:
+      - "helm compose plan": "commands/plan.md"
       - "helm compose up": "commands/up.md"
       - "helm compose down": "commands/down.md"
       - "helm compose list": "commands/list.md"

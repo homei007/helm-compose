@@ -19,9 +19,10 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	"github.com/Masterminds/semver"
 	"gopkg.in/yaml.v2"
@@ -33,11 +34,13 @@ var (
 )
 
 func findComposeConfig() []string {
+	return findComposeConfigIn(".")
+}
+
+func findComposeConfigIn(directory string) []string {
 	var files []string
 	filenames := []string{
 		"helm-compose.yaml",
-		"helm-compose.yml",
-		"helmcompose.yaml",
 		"helm-compose.yml",
 		"helmcompose.yaml",
 		"helmcompose.yml",
@@ -46,16 +49,14 @@ func findComposeConfig() []string {
 		"compose.yml",
 	}
 
-	filepath.WalkDir(".", func(s string, d fs.DirEntry, e error) error {
-		file := filepath.Base(s)
-
-		for _, filename := range filenames {
-			if file == filename {
-				files = append(files, file)
-			}
+	for _, filename := range filenames {
+		path := filepath.Join(directory, filename)
+		info, err := os.Stat(path)
+		if err == nil && !info.IsDir() {
+			files = append(files, path)
 		}
-		return nil
-	})
+	}
+
 	return files
 }
 
@@ -133,6 +134,10 @@ func validateCompose(config *Config) error {
 		return err
 	}
 
+	if err := ValidateReleaseDependencies(config.Releases); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -152,6 +157,74 @@ func validateCompose1_1(version *semver.Version, config *Config) error {
 	for name, release := range config.Releases {
 		if release.Wait {
 			return fmt.Errorf("trying to use 'wait' in release '%s'", name)
+		}
+		if len(release.Needs) > 0 {
+			return fmt.Errorf("trying to use 'needs' in release '%s'", name)
+		}
+	}
+
+	return nil
+}
+
+func ValidateReleaseDependencies(releases map[string]Release) error {
+	names := make([]string, 0, len(releases))
+	for name := range releases {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		seen := map[string]struct{}{}
+		for _, dependency := range releases[name].Needs {
+			if dependency == name {
+				return fmt.Errorf("release %q cannot depend on itself", name)
+			}
+			if _, ok := releases[dependency]; !ok {
+				return fmt.Errorf("release %q depends on unknown release %q", name, dependency)
+			}
+			if _, ok := seen[dependency]; ok {
+				return fmt.Errorf("release %q declares dependency %q more than once", name, dependency)
+			}
+			seen[dependency] = struct{}{}
+		}
+	}
+
+	state := make(map[string]int, len(releases))
+	stack := make([]string, 0, len(releases))
+	var visit func(string) error
+	visit = func(name string) error {
+		switch state[name] {
+		case 1:
+			start := 0
+			for i, item := range stack {
+				if item == name {
+					start = i
+					break
+				}
+			}
+			cycle := append(append([]string{}, stack[start:]...), name)
+			return fmt.Errorf("release dependency cycle: %s", strings.Join(cycle, " -> "))
+		case 2:
+			return nil
+		}
+
+		state[name] = 1
+		stack = append(stack, name)
+		dependencies := append([]string{}, releases[name].Needs...)
+		sort.Strings(dependencies)
+		for _, dependency := range dependencies {
+			if err := visit(dependency); err != nil {
+				return err
+			}
+		}
+		stack = stack[:len(stack)-1]
+		state[name] = 2
+		return nil
+	}
+
+	for _, name := range names {
+		if err := visit(name); err != nil {
+			return err
 		}
 	}
 
