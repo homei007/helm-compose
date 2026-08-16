@@ -24,10 +24,12 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	cfg "github.com/seacrew/helm-compose/internal/config"
 	"github.com/seacrew/helm-compose/internal/util"
@@ -43,7 +45,7 @@ type S3Provider struct {
 	numberOfRevisions int
 	bucket            *string
 	prefix            *string
-	lister            *s3.S3
+	client            s3iface.S3API
 	uploader          *s3manager.Uploader
 	downloader        *s3manager.Downloader
 }
@@ -83,12 +85,13 @@ func newS3Provider(providerConfig *cfg.Storage) (*S3Provider, error) {
 		return nil, err
 	}
 
+	service := s3.New(sess)
 	provider := &S3Provider{
 		name:              providerConfig.Name,
 		numberOfRevisions: providerConfig.NumberOfRevisions,
 		bucket:            &providerConfig.S3Bucket,
 		prefix:            &providerConfig.S3Prefix,
-		lister:            s3.New(sess),
+		client:            service,
 		uploader:          s3manager.NewUploader(sess),
 		downloader:        s3manager.NewDownloader(sess),
 	}
@@ -97,16 +100,16 @@ func newS3Provider(providerConfig *cfg.Storage) (*S3Provider, error) {
 }
 
 func (p S3Provider) load() (*[]byte, error) {
-	resp, err := p.lister.ListObjectsV2(&s3.ListObjectsV2Input{Bucket: p.bucket, Prefix: p.prefix})
+	objects, err := p.listObjects()
 	if err != nil {
 		return nil, err
 	}
 
-	if len(resp.Contents) == 0 {
+	if len(objects) == 0 {
 		return nil, nil
 	}
 
-	_, _, latest, err := p.minMax(resp.Contents)
+	_, _, latest, err := p.minMax(objects)
 	if err != nil {
 		return nil, err
 	}
@@ -125,12 +128,12 @@ func (p S3Provider) load() (*[]byte, error) {
 }
 
 func (p S3Provider) store(encodedConfig *string) error {
-	resp, err := p.lister.ListObjectsV2(&s3.ListObjectsV2Input{Bucket: p.bucket, Prefix: p.prefix})
+	objects, err := p.listObjects()
 	if err != nil {
 		return err
 	}
 
-	minimum, maximum, _, err := p.minMax(resp.Contents)
+	minimum, maximum, _, err := p.minMax(objects)
 	if err != nil {
 		return err
 	}
@@ -155,17 +158,13 @@ func (p S3Provider) store(encodedConfig *string) error {
 		return err
 	}
 
-	if minimum > revision-p.numberOfRevisions {
-		return nil
-	}
-
-	for i := minimum; i < revision-p.numberOfRevisions; i++ {
+	for _, i := range revisionsToDelete(minimum, revision, p.numberOfRevisions) {
 		key := fmt.Sprintf(s3ObjectNameFormat, p.name, i)
 		if len(*p.prefix) > 0 {
 			key = fmt.Sprintf("%s/%s", *p.prefix, key)
 		}
 
-		_, err := p.lister.DeleteObject(&s3.DeleteObjectInput{Bucket: p.bucket, Key: &key})
+		_, err := p.client.DeleteObject(&s3.DeleteObjectInput{Bucket: p.bucket, Key: &key})
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -175,7 +174,7 @@ func (p S3Provider) store(encodedConfig *string) error {
 }
 
 func (p S3Provider) list() ([]ComposeRevision, error) {
-	resp, err := p.lister.ListObjectsV2(&s3.ListObjectsV2Input{Bucket: p.bucket, Prefix: p.prefix})
+	objects, err := p.listObjects()
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +186,10 @@ func (p S3Provider) list() ([]ComposeRevision, error) {
 		return nil, err
 	}
 
-	for _, item := range resp.Contents {
+	for _, item := range objects {
+		if item == nil || item.Key == nil {
+			continue
+		}
 		matches := r.FindStringSubmatch(*item.Key)
 		if len(matches) == 0 {
 			continue
@@ -198,10 +200,29 @@ func (p S3Provider) list() ([]ComposeRevision, error) {
 			return nil, err
 		}
 
-		revisions = append(revisions, ComposeRevision{revision, *item.LastModified})
+		modified := time.Time{}
+		if item.LastModified != nil {
+			modified = *item.LastModified
+		}
+		revisions = append(revisions, ComposeRevision{revision, modified})
 	}
 
 	return revisions, nil
+}
+
+func (p S3Provider) listObjects() ([]*s3.Object, error) {
+	objects := make([]*s3.Object, 0)
+	err := p.client.ListObjectsV2Pages(
+		&s3.ListObjectsV2Input{Bucket: p.bucket, Prefix: p.prefix},
+		func(page *s3.ListObjectsV2Output, _ bool) bool {
+			objects = append(objects, page.Contents...)
+			return true
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	return objects, nil
 }
 
 func (p S3Provider) get(revision int) (*[]byte, error) {
@@ -239,6 +260,9 @@ func (p S3Provider) minMax(objects []*s3.Object) (int, int, *s3.Object, error) {
 	}
 
 	for _, item := range objects {
+		if item == nil || item.Key == nil {
+			continue
+		}
 		matches := r.FindStringSubmatch(*item.Key)
 
 		if len(matches) == 0 {
@@ -258,6 +282,9 @@ func (p S3Provider) minMax(objects []*s3.Object) (int, int, *s3.Object, error) {
 			maximum = revision
 			latest = item
 		}
+	}
+	if latest == nil {
+		return 0, 0, nil, nil
 	}
 
 	return minimum, maximum, latest, nil

@@ -6,7 +6,13 @@ Uninstall releases defined in your `helm-compose.yaml`
 
 With no release names, this command uninstalls all releases from the previous applied revision if one exists. Otherwise, it uninstalls the releases defined in your current `helm-compose.yaml`.
 
-Pass one or more release names to uninstall only those releases. The applied revision is updated so the remaining releases are left intact.
+Pass one or more release names to uninstall only those releases. The applied
+revision is updated so the remaining releases are left intact. Helm Compose
+rejects a selective uninstall when it would leave an applied release whose
+`needs` dependency was removed.
+
+Dependencies are uninstalled in reverse order. Releases in the same dependency
+group run concurrently, bounded by `--concurrency` when it is set.
 
 ```
 helm compose down [RELEASE ...] [flags]
@@ -19,6 +25,7 @@ helm compose down --release wordpress2
 
 ```
 Flags:
+      --concurrency int    Maximum concurrent Helm operations (0 means unlimited)
   -h, --help              help for down
   -r, --release strings   Release name to uninstall (can be specified multiple times)
 

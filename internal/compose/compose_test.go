@@ -16,6 +16,7 @@ limitations under the License.
 package compose
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"testing"
@@ -26,7 +27,7 @@ import (
 func TestRunUpDoesNotStoreFailedDeployment(t *testing.T) {
 	stored := false
 	stubComposeDependencies(t,
-		func(string, ...string) (string, error) {
+		func(context.Context, string, ...string) (string, error) {
 			return "upgrade failed", errors.New("exit status 1")
 		},
 		func(*cfg.Config) (*cfg.Config, error) { return nil, nil },
@@ -54,7 +55,7 @@ func TestRunUpDoesNotForgetFailedUninstall(t *testing.T) {
 		"removed": {Chart: "example/removed"},
 	})
 	stubComposeDependencies(t,
-		func(string, ...string) (string, error) {
+		func(context.Context, string, ...string) (string, error) {
 			return "uninstall failed", errors.New("exit status 1")
 		},
 		func(*cfg.Config) (*cfg.Config, error) { return previous, nil },
@@ -85,7 +86,7 @@ func TestRunUpSelectedReleaseMergesAppliedState(t *testing.T) {
 	var commands [][]string
 	var stored *cfg.Config
 	stubComposeDependencies(t,
-		func(_ string, args ...string) (string, error) {
+		func(_ context.Context, _ string, args ...string) (string, error) {
 			commands = append(commands, append([]string{}, args...))
 			return "", nil
 		},
@@ -126,7 +127,7 @@ func TestRunDownSelectedReleaseUpdatesAppliedState(t *testing.T) {
 	var commands [][]string
 	var stored *cfg.Config
 	stubComposeDependencies(t,
-		func(_ string, args ...string) (string, error) {
+		func(_ context.Context, _ string, args ...string) (string, error) {
 			commands = append(commands, append([]string{}, args...))
 			return "", nil
 		},
@@ -161,7 +162,7 @@ func TestRunDownSelectedReleaseUpdatesAppliedState(t *testing.T) {
 func TestRunUpRejectsUnknownSelectedRelease(t *testing.T) {
 	executed := false
 	stubComposeDependencies(t,
-		func(string, ...string) (string, error) {
+		func(context.Context, string, ...string) (string, error) {
 			executed = true
 			return "", nil
 		},
@@ -178,9 +179,80 @@ func TestRunUpRejectsUnknownSelectedRelease(t *testing.T) {
 	}
 }
 
+func TestRunUpSelectedReleaseIncludesDependenciesInOrder(t *testing.T) {
+	var commands []string
+	stubComposeDependencies(t,
+		func(_ context.Context, _ string, args ...string) (string, error) {
+			commands = append(commands, args[len(args)-2])
+			return "", nil
+		},
+		func(*cfg.Config) (*cfg.Config, error) { return nil, nil },
+		func(*cfg.Config) error { return nil },
+	)
+	config := testConfig(map[string]cfg.Release{
+		"app":      {Chart: "example/app", Needs: []string{"database"}},
+		"database": {Chart: "example/database"},
+		"other":    {Chart: "example/other"},
+	})
+
+	if err := RunUpContext(context.Background(), config, []string{"app"}, 1); err != nil {
+		t.Fatalf("RunUpContext returned an error: %v", err)
+	}
+	if want := []string{"database", "app"}; !reflect.DeepEqual(commands, want) {
+		t.Fatalf("unexpected release order: got %#v, want %#v", commands, want)
+	}
+}
+
+func TestRunDownReversesDependencyOrder(t *testing.T) {
+	previous := testConfig(map[string]cfg.Release{
+		"app":      {Chart: "example/app", Needs: []string{"database"}},
+		"database": {Chart: "example/database"},
+	})
+	var commands []string
+	stubComposeDependencies(t,
+		func(_ context.Context, _ string, args ...string) (string, error) {
+			commands = append(commands, args[len(args)-1])
+			return "", nil
+		},
+		func(*cfg.Config) (*cfg.Config, error) { return previous, nil },
+		func(*cfg.Config) error { return nil },
+	)
+
+	if err := RunDownContext(context.Background(), previous, nil, 1); err != nil {
+		t.Fatalf("RunDownContext returned an error: %v", err)
+	}
+	if want := []string{"app", "database"}; !reflect.DeepEqual(commands, want) {
+		t.Fatalf("unexpected uninstall order: got %#v, want %#v", commands, want)
+	}
+}
+
+func TestRunDownRejectsLeavingDependentReleaseApplied(t *testing.T) {
+	previous := testConfig(map[string]cfg.Release{
+		"app":      {Chart: "example/app", Needs: []string{"database"}},
+		"database": {Chart: "example/database"},
+	})
+	executed := false
+	stubComposeDependencies(t,
+		func(context.Context, string, ...string) (string, error) {
+			executed = true
+			return "", nil
+		},
+		func(*cfg.Config) (*cfg.Config, error) { return previous, nil },
+		func(*cfg.Config) error { return nil },
+	)
+
+	err := RunDownContext(context.Background(), previous, []string{"database"}, 1)
+	if err == nil {
+		t.Fatal("expected an error when a dependent release would remain applied")
+	}
+	if executed {
+		t.Fatal("Helm must not run when selected down validation fails")
+	}
+}
+
 func stubComposeDependencies(
 	t *testing.T,
-	execute func(string, ...string) (string, error),
+	execute func(context.Context, string, ...string) (string, error),
 	load func(*cfg.Config) (*cfg.Config, error),
 	store func(*cfg.Config) error,
 ) {

@@ -21,19 +21,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var upReleases []string
-var upConcurrency int
+var planReleases []string
 
-var upCmd = &cobra.Command{
-	Use:   "up [RELEASE ...]",
-	Short: "Install or upgrade releases defined in your compose file.",
-	Long:  ``,
+var planCmd = &cobra.Command{
+	Use:     "plan [RELEASE ...]",
+	Aliases: []string{"diff"},
+	Short:   "Show the release actions Helm Compose would perform without changing the cluster.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-
-		if err := compose.CompatibleHelmVersionContext(cmd.Context()); err != nil {
-			return err
-		}
 
 		config, err := config.ParseComposeFile(composeFile)
 		if err != nil {
@@ -41,13 +36,12 @@ var upCmd = &cobra.Command{
 		}
 
 		releases := append([]string{}, args...)
-		releases = append(releases, upReleases...)
-		return compose.RunUpContext(cmd.Context(), config, releases, upConcurrency)
+		releases = append(releases, planReleases...)
+		return compose.PlanTo(cmd.OutOrStdout(), config, releases)
 	},
 }
 
 func init() {
-	upCmd.Flags().StringSliceVarP(&upReleases, "release", "r", nil, "Release name to install or upgrade (can be specified multiple times)")
-	upCmd.Flags().IntVar(&upConcurrency, "concurrency", 0, "Maximum concurrent Helm operations (0 means unlimited)")
-	rootCmd.AddCommand(upCmd)
+	planCmd.Flags().StringSliceVarP(&planReleases, "release", "r", nil, "Release name to plan (can be specified multiple times)")
+	rootCmd.AddCommand(planCmd)
 }

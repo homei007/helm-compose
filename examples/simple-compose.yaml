@@ -11,6 +11,8 @@ releases:
   jekyll:
     chart: bitnami/nginx
     chartVersion: 14.2.1
+    needs:
+      - default
     values:
       cloneStaticSiteFromGit:
         enabled: true

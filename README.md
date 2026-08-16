@@ -11,6 +11,10 @@ Current development focuses on reliable multi-release operations, concurrent
 processing, Helm 3 and Helm 4 compatibility, and making the plugin easy to
 install and maintain.
 
+Helm Compose can preview operations with `helm compose plan` (or
+`helm compose diff`), order releases with `needs`, and cap parallel Helm
+processes with `--concurrency`.
+
 ![helm-compose-banner](https://user-images.githubusercontent.com/18513179/240495789-e76890d3-f0f9-48b9-9d18-89e53effe65b.png)
 
 [![Build Status](https://github.com/homei007/helm-compose/actions/workflows/build.yaml/badge.svg)](https://github.com/homei007/helm-compose/actions/workflows/build.yaml)
@@ -54,16 +58,12 @@ Actual timing depends on testing, user feedback, and contributor capacity.
 - Keep the shared legacy manifest compatible with Helm 3 and Helm 4 while
   preparing a versioned-manifest migration path before Helm 5.
 - Expand post-renderer examples for Helm 3 paths and Helm 4 plugin names.
-- Improve failure reporting and cancellation when concurrent releases are
-  processed.
 - Expand integration coverage for local and S3 state storage, namespaces,
   dependencies, and repeatable upgrades.
 
 ### User experience
 
-- Add a dry-run or plan mode that shows the actions Helm Compose will take.
-- Improve selective release operations, dependency ordering, and progress
-  output for larger compose files.
+- Improve selectors and progress output for larger compose files.
 - Document migration paths, common failure modes, and tested Helm/Kubernetes
   combinations.
 - Add more practical examples for production-style repositories and values
@@ -86,6 +86,12 @@ Install your releases:
 
 ```bash
 $ helm compose up -f helm-compose.yaml
+```
+
+Preview the same operation without changing the cluster:
+
+```bash
+$ helm compose plan -f helm-compose.yaml
 ```
 
 Install or upgrade only selected releases:
@@ -123,6 +129,8 @@ releases:
   wordpress2:
     chart: bitnami/wordpress
     chartVersion: 15.2.22
+    needs:
+      - postgres
     namespace: homepage
     createNamespace: true
   postgres:

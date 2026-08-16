@@ -17,6 +17,7 @@ package compose
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,7 +33,7 @@ import (
 var (
 	helm        = os.Getenv("HELM_BIN")
 	minVersion  = semver.MustParse("v3.0.0")
-	executeHelm = util.Execute
+	executeHelm = util.ExecuteContext
 )
 
 type HelmCommand string
@@ -44,7 +45,11 @@ const (
 )
 
 func CompatibleHelmVersion() error {
-	cmd := exec.Command(helm, "version", "--short")
+	return CompatibleHelmVersionContext(context.Background())
+}
+
+func CompatibleHelmVersionContext(ctx context.Context) error {
+	cmd := exec.CommandContext(ctx, helm, "version", "--short")
 	util.DebugPrint("Executing %s", strings.Join(cmd.Args, " "))
 
 	output, err := cmd.CombinedOutput()
@@ -64,8 +69,8 @@ func CompatibleHelmVersion() error {
 	return nil
 }
 
-func addHelmRepository(name string, url string) error {
-	output, err := util.Execute(helm, "repo", "add", "--force-update", name, url)
+func addHelmRepository(ctx context.Context, name string, url string) error {
+	output, err := executeHelm(ctx, helm, "repo", "add", "--force-update", name, url)
 
 	if err != nil {
 		return errors.New(output)
@@ -74,25 +79,25 @@ func addHelmRepository(name string, url string) error {
 	return nil
 }
 
-func installHelmRelease(name string, release *cfg.Release) error {
+func installHelmRelease(ctx context.Context, name string, release *cfg.Release) error {
 	args, err := createHelmArguments(HELM_UPGRADE, name, release)
 	if err != nil {
 		return err
 	}
 
-	return helmExec(name, args)
+	return helmExec(ctx, name, args)
 }
 
-func templateHelmRelease(name string, release *cfg.Release) error {
+func templateHelmRelease(ctx context.Context, name string, release *cfg.Release) error {
 	args, err := createHelmArguments(HELM_TEMPLATE, name, release)
 	if err != nil {
 		return err
 	}
 
-	return helmExec("", args)
+	return helmExec(ctx, "", args)
 }
 
-func uninstallHelmRelease(name string, release *cfg.Release) error {
+func uninstallHelmRelease(ctx context.Context, name string, release *cfg.Release) error {
 	var args []string
 
 	args = append(args, "uninstall")
@@ -127,7 +132,7 @@ func uninstallHelmRelease(name string, release *cfg.Release) error {
 
 	args = append(args, name)
 
-	return helmExec(name, args)
+	return helmExec(ctx, name, args)
 }
 
 func createHelmArguments(command HelmCommand, name string, release *cfg.Release) ([]string, error) {
@@ -249,9 +254,9 @@ func createHelmArguments(command HelmCommand, name string, release *cfg.Release)
 	return args, nil
 }
 
-func helmExec(name string, args []string) error {
+func helmExec(ctx context.Context, name string, args []string) error {
 	cp := util.NewColorPrinter(name)
-	output, executeErr := executeHelm(helm, args...)
+	output, executeErr := executeHelm(ctx, helm, args...)
 
 	scanner := bufio.NewScanner(strings.NewReader(output))
 	for scanner.Scan() {
@@ -264,6 +269,9 @@ func helmExec(name string, args []string) error {
 
 	if err := scanner.Err(); err != nil {
 		return err
+	}
+	if ctx.Err() != nil {
+		return ctx.Err()
 	}
 
 	return executeErr

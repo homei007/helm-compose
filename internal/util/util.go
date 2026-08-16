@@ -16,6 +16,7 @@ limitations under the License.
 package util
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"os"
@@ -39,7 +40,11 @@ func DebugPrint(format string, a ...interface{}) {
 }
 
 func Execute(command string, args ...string) (string, error) {
-	cmd := exec.Command(command, args...)
+	return ExecuteContext(context.Background(), command, args...)
+}
+
+func ExecuteContext(ctx context.Context, command string, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, command, args...)
 	output, err := cmd.CombinedOutput()
 
 	if output == nil {

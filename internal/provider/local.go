@@ -50,10 +50,11 @@ func newLocalProvider(providerConfig *cfg.Storage) *LocalProvider {
 }
 
 func (p LocalProvider) load() (*[]byte, error) {
-	if _, err := os.Stat(p.path); os.IsNotExist(err) {
-		if err := os.Mkdir(p.path, os.ModePerm); err != nil {
-			return nil, err
+	if _, err := os.Stat(p.path); err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
 		}
+		return nil, err
 	}
 
 	_, maximum, err := p.minMax(p.name, p.path)
@@ -74,6 +75,10 @@ func (p LocalProvider) load() (*[]byte, error) {
 }
 
 func (p LocalProvider) store(encodedConfig *string) error {
+	if err := os.MkdirAll(p.path, os.ModePerm); err != nil {
+		return err
+	}
+
 	minimum, maximum, err := p.minMax(p.name, p.path)
 	if err != nil {
 		return err
@@ -85,11 +90,7 @@ func (p LocalProvider) store(encodedConfig *string) error {
 		return err
 	}
 
-	if minimum > maximum-p.numberOfRevisions {
-		return nil
-	}
-
-	for i := minimum; i <= maximum-p.numberOfRevisions; i++ {
+	for _, i := range revisionsToDelete(minimum, maximum, p.numberOfRevisions) {
 		if err := os.Remove(fmt.Sprintf(pathFormat, p.path, p.name, i)); err != nil {
 			fmt.Println(err)
 		}

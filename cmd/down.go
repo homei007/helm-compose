@@ -22,6 +22,7 @@ import (
 )
 
 var downReleases []string
+var downConcurrency int
 
 // downCmd represents the down command
 var downCmd = &cobra.Command{
@@ -31,7 +32,7 @@ var downCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 
-		if err := compose.CompatibleHelmVersion(); err != nil {
+		if err := compose.CompatibleHelmVersionContext(cmd.Context()); err != nil {
 			return err
 		}
 
@@ -42,11 +43,12 @@ var downCmd = &cobra.Command{
 
 		releases := append([]string{}, args...)
 		releases = append(releases, downReleases...)
-		return compose.RunDown(config, releases)
+		return compose.RunDownContext(cmd.Context(), config, releases, downConcurrency)
 	},
 }
 
 func init() {
 	downCmd.Flags().StringSliceVarP(&downReleases, "release", "r", nil, "Release name to uninstall (can be specified multiple times)")
+	downCmd.Flags().IntVar(&downConcurrency, "concurrency", 0, "Maximum concurrent Helm operations (0 means unlimited)")
 	rootCmd.AddCommand(downCmd)
 }
