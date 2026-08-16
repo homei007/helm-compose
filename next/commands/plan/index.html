@@ -9,10 +9,10 @@
       
       
       
-        <link rel="prev" href="../list/">
+        <link rel="prev" href="../../storage-providers/">
       
       
-        <link rel="next" href="../template/">
+        <link rel="next" href="../up/">
       
       
         
@@ -23,7 +23,7 @@
     
     
       
-        <title>helm compose get - Helm Compose Documentation</title>
+        <title>helm compose plan - Helm Compose Documentation</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#helm-compose-get" class="md-skip">
+        <a href="#helm-compose-plan" class="md-skip">
           Skip to content
         </a>
       
@@ -115,7 +115,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              helm compose get
+              helm compose plan
             
           </span>
         </div>
@@ -460,10 +460,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../plan/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    helm compose plan
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -479,6 +506,48 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -572,37 +641,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    helm compose get
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../get/" class="md-nav__link">
         
   
   
@@ -618,48 +660,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Options
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -791,7 +791,7 @@
     
     
       <li class="md-path__item">
-        <a href="../plan/" class="md-path__link">
+        <a href="./" class="md-path__link">
           
   <span class="md-ellipsis">
     Commands
@@ -816,18 +816,54 @@
   
 
 
-<h1 id="helm-compose-get">helm compose get</h1>
-<p>Get a previous revision of your <code>helm-compose.yaml</code></p>
+<h1 id="helm-compose-plan">helm compose plan</h1>
+<p>Preview the release operations Helm Compose would perform without changing the
+cluster. <code>helm compose diff</code> is an alias for this command.</p>
 <h2 id="usage">Usage</h2>
-<p>The following command will return the previous <code>helm-compose.yaml</code> content on stdout.</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>helm compose get [revision] [flags]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>helm compose plan [RELEASE ...] [flags]
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>helm compose plan
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>helm compose diff --release app
 </span></code></pre></div>
+<p>The output is grouped in execution order. Releases in the same group can run
+concurrently. Actions are:</p>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>install</td>
+<td>The release is not present in the latest applied Compose revision.</td>
+</tr>
+<tr>
+<td>upgrade</td>
+<td>The release configuration differs from the latest applied revision.</td>
+</tr>
+<tr>
+<td>sync</td>
+<td>The Compose configuration is unchanged, but <code>up</code> will still ask Helm to reconcile the release.</td>
+</tr>
+<tr>
+<td>uninstall</td>
+<td>The release exists in the latest applied revision but was removed from the current file.</td>
+</tr>
+</tbody>
+</table>
+<p>This is a Compose-state comparison. It does not render charts or query the
+cluster for live-manifest drift.</p>
+<p>When release names are supplied, their transitive <code>needs</code> are included and
+removed releases are not planned for uninstall.</p>
 <h2 id="options">Options</h2>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Flags:
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  -h, --help   help for get
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>Global Flags:
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  -f, --file string   Compose configuration file
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  -h, --help              help for plan
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  -r, --release strings   Release name to plan (can be specified multiple times)
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>Global Flags:
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>  -f, --file string   Compose configuration file
 </span></code></pre></div>
 
 
@@ -849,7 +885,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="May 29, 2023 18:40:36 UTC">May 29, 2023</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="August 16, 2026 16:24:07 UTC">August 16, 2026</span>
   </span>
 
     
@@ -879,7 +915,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../list/" class="md-footer__link md-footer__link--prev" aria-label="Previous: helm compose list">
+          <a href="../../storage-providers/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Storage Providers">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -889,20 +925,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                helm compose list
+                Storage Providers
               </div>
             </div>
           </a>
         
         
           
-          <a href="../template/" class="md-footer__link md-footer__link--next" aria-label="Next: helm compose template">
+          <a href="../up/" class="md-footer__link md-footer__link--next" aria-label="Next: helm compose up">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                helm compose template
+                helm compose up
               </div>
             </div>
             <div class="md-footer__button md-icon">
